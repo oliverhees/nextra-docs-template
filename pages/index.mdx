@@ -1,11 +1,91 @@
-# Introduction
- 
-Welcome to Nextra! This is a basic docs template. You can use it as a starting point for your own project :)
+# Serverseitiges GA4 Tracking für JTL Shop 5
+## Dokumentation
 
-## What is Nextra?
+### Inhaltsverzeichnis
+1. Einführung
+2. Systemanforderungen
+3. Installation
+4. Grundkonfiguration
+5. Funktionsweise
 
-A **simple**, **powerful** and **flexible** site generation framework with everything you love from Next.js.
+### 1. Einführung
 
-## Documentation
+Das Serverseitige GA4 Tracking Plugin ermöglicht eine datenschutzkonforme Tracking-Lösung für JTL Shop 5 durch direkte Server-zu-Server-Kommunikation mit Google Analytics 4. Im Gegensatz zu clientseitigen Tracking-Lösungen werden alle Daten direkt vom Server an Google Analytics übermittelt, wodurch Adblocker umgangen und eine höhere Datenqualität erreicht wird.
 
-The documentation is available at [https://nextra.site](https://nextra.site).
+#### Hauptfunktionen:
+- Vollständig serverseitiges Tracking ohne JavaScript
+- Tracking aller relevanten E-Commerce-Events
+- Detaillierte Logging-Funktionen
+- Flexibles Konfigurationssystem
+- Automatische Datenhygiene durch Cronjobs
+
+### 2. Systemanforderungen
+
+- JTL Shop Version: >= 5.0.0
+- PHP Version: >= 7.4
+- MySQL Version: >= 5.7
+- Ausgehende HTTPS-Verbindungen müssen möglich sein
+- Aktive Google Analytics 4 Property mit Measurement ID
+- GA4 API Secret für die Server-zu-Server-Kommunikation
+
+### 3. Installation
+
+#### 3.1 Manuelle Installation
+1. Laden Sie das Plugin-Paket herunter
+2. Extrahieren Sie den Inhalt in das Verzeichnis `<shop-root>/plugins/`
+3. Navigieren Sie im Shop-Backend zu "Plugin-Verwaltung"
+4. Klicken Sie auf "Plugin installieren"
+5. Aktivieren Sie das Plugin nach erfolgreicher Installation
+
+#### 3.2 Installation via Composer
+```bash
+composer require your-vendor/serverside-ga4
+```
+
+#### 3.3 Nach der Installation
+1. Führen Sie einen Cache-Clear durch
+2. Prüfen Sie die Datenbank-Tabellen auf korrekte Erstellung
+3. Konfigurieren Sie die Basis-Einstellungen
+
+### 4. Grundkonfiguration
+
+#### 4.1 Google Analytics 4 Vorbereitung
+1. Öffnen Sie Ihre GA4 Property
+2. Navigieren Sie zu "Admin" → "Datenstreams"
+3. Wählen Sie Ihren Web-Datenstrom aus oder erstellen Sie einen neuen
+4. Notieren Sie sich die Measurement ID (Format: G-XXXXXXXXXX)
+5. Erstellen Sie ein neues API Secret unter "API-Geheimschlüssel"
+
+#### 4.2 Plugin-Konfiguration
+1. Öffnen Sie die Plugin-Einstellungen im Shop-Backend
+2. Tragen Sie die Measurement ID ein
+3. Fügen Sie das API Secret ein
+4. Konfigurieren Sie die Shop-Währung
+5. Aktivieren Sie die gewünschten Tracking-Events
+
+### 5. Funktionsweise
+
+#### 5.1 Tracking-Prozess
+1. Ein Shop-Event wird ausgelöst (z.B. Produktansicht)
+2. Der EventSubscriber fängt das Event ab
+3. Die Event-Daten werden an den GA4Service übergeben
+4. Der TrackingService bereitet die Daten auf
+5. Die Daten werden an Google Analytics gesendet
+6. Der Vorgang wird geloggt
+
+#### 5.2 Datenfluss
+```
+Shop-Event → EventSubscriber → GA4Service → TrackingService → Google Analytics
+     ↓
+Logging-System
+```
+
+#### 5.3 Getrackte Events
+| Event-Name | Beschreibung | Trigger |
+|------------|--------------|---------|
+| view_item | Produktdetailansicht | Aufruf einer Produktdetailseite |
+| view_item_list | Kategorieansicht | Aufruf einer Kategorieseite |
+| add_to_cart | Warenkorb-Addition | Artikel wird in den Warenkorb gelegt |
+| remove_from_cart | Warenkorb-Entfernung | Artikel wird aus dem Warenkorb entfernt |
+| begin_checkout | Checkout-Start | Beginn des Checkout-Prozesses |
+| purchase | Kauf | Erfolgreicher Abschluss einer Bestellung |
