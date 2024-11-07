@@ -1,3 +1,236 @@
-# Advanced
+# Serverseitiges GA4 Tracking für JTL Shop 5
+## Dokumentation - Teil 3: Erweiterte Konfiguration und Integration
 
-This is the index page for the Advanced folder!
+### Inhaltsverzeichnis
+1. Erweiterte Konfiguration
+2. Integration mit anderen Systemen
+3. Anpassung und Erweiterung
+4. Administrative Funktionen
+5. Sicherheit und Optimierung
+
+### 1. Erweiterte Konfiguration
+
+#### 1.1 Custom Dimensions
+```php
+// Beispiel: Hinzufügen einer Custom Dimension
+$eventData['params']['custom_dimensions'] = [
+    'customer_type' => $customer->getCustomerType(),
+    'customer_group' => $customer->getCustomerGroup(),
+    'device_type' => $this->trackingService->getDeviceType()
+];
+```
+
+Verfügbare Custom Dimensions:
+- customer_type
+- customer_group
+- device_type
+- payment_method
+- shipping_method
+- order_source
+
+#### 1.2 Event-Filter
+```json
+{
+    "eventFilters": {
+        "excludeProducts": ["SKU123", "SKU456"],
+        "excludeCategories": ["CAT789"],
+        "minOrderValue": 0.01,
+        "maxOrderValue": 9999.99
+    }
+}
+```
+
+#### 1.3 Erweiterte Tracking-Optionen
+```php
+// config.json
+{
+    "tracking": {
+        "sessionTimeout": 1800,
+        "attributionWindow": 30,
+        "excludedIPs": ["127.0.0.1"],
+        "excludedUserAgents": ["bot", "crawler"],
+        "samplingRate": 100
+    }
+}
+```
+
+### 2. Integration mit anderen Systemen
+
+#### 2.1 Export-Schnittstelle
+```php
+public function exportEvents(DateTime $startDate, DateTime $endDate): array
+{
+    return $this->db->getArrays(
+        "SELECT * FROM ga4_tracking_log 
+         WHERE timestamp BETWEEN :start AND :end",
+        [
+            'start' => $startDate->getTimestamp(),
+            'end' => $endDate->getTimestamp()
+        ]
+    );
+}
+```
+
+#### 2.2 API-Endpunkte
+```php
+// routes.php
+$app->get('/api/ga4/stats', 'GA4Controller:getStats');
+$app->post('/api/ga4/event', 'GA4Controller:trackEvent');
+```
+
+#### 2.3 Webhooks
+```php
+public function registerWebhooks(): void
+{
+    $this->container->get('Dispatcher')->listen(
+        'webhook.ga4.event',
+        [$this, 'handleWebhook']
+    );
+}
+```
+
+### 3. Anpassung und Erweiterung
+
+#### 3.1 Event-Erweiterungen
+```php
+// Custom Event hinzufügen
+class CustomEventService extends GA4Service
+{
+    public function trackCustomEvent($eventName, $eventData): void
+    {
+        $data = [
+            'client_id' => $this->getClientId(),
+            'events' => [
+                'name' => $eventName,
+                'params' => $eventData
+            ]
+        ];
+        
+        $this->sendToGA4($data);
+    }
+}
+```
+
+#### 3.2 Template-Anpassungen
+```smarty
+{* templates/custom_tracking.tpl *}
+{block name="ga4_custom_tracking"}
+    {if $customData}
+        <div data-ga4-custom="{$customData|escape:'html'}"></div>
+    {/if}
+{/block}
+```
+
+#### 3.3 Filter und Middleware
+```php
+class GA4Middleware
+{
+    public function process(Request $request, callable $next)
+    {
+        if ($this->shouldTrack($request)) {
+            return $next($request);
+        }
+        return null;
+    }
+    
+    private function shouldTrack(Request $request): bool
+    {
+        // Implementierung der Tracking-Logik
+        return true;
+    }
+}
+```
+
+### 4. Administrative Funktionen
+
+#### 4.1 Datenbereinigung
+```php
+public function cleanupOldData(): void
+{
+    $retentionDays = $this->config['dataRetentionDays'] ?? 90;
+    $timestamp = time() - ($retentionDays * 86400);
+    
+    $this->db->query(
+        "DELETE FROM ga4_tracking_log 
+         WHERE timestamp < :timestamp",
+        ['timestamp' => $timestamp]
+    );
+}
+```
+
+#### 4.2 Reporting
+```php
+public function generateReport(array $params): array
+{
+    return [
+        'totalEvents' => $this->getTotalEvents($params),
+        'eventTypes' => $this->getEventDistribution($params),
+        'conversionRate' => $this->calculateConversionRate($params),
+        'errorRate' => $this->getErrorRate($params)
+    ];
+}
+```
+
+#### 4.3 Monitoring
+```php
+public function checkHealth(): array
+{
+    return [
+        'lastEvent' => $this->getLastEventTimestamp(),
+        'queueSize' => $this->getQueueSize(),
+        'errorCount' => $this->getErrorCount(),
+        'apiStatus' => $this->checkApiConnection()
+    ];
+}
+```
+
+### 5. Sicherheit und Optimierung
+
+#### 5.1 Daten-Validierung
+```php
+public function validateEventData(array $data): bool
+{
+    $validator = new EventValidator();
+    return $validator->validate($data);
+}
+```
+
+#### 5.2 Caching
+```php
+public function getCachedData(string $key): ?array
+{
+    $cache = $this->container->get('cache');
+    return $cache->get('ga4_' . $key);
+}
+
+public function setCachedData(string $key, array $data, int $ttl = 3600): void
+{
+    $cache = $this->container->get('cache');
+    $cache->set('ga4_' . $key, $data, $ttl);
+}
+```
+
+#### 5.3 Performance-Optimierung
+```php
+public function batchProcess(array $events): void
+{
+    $chunks = array_chunk($events, 20);
+    foreach ($chunks as $chunk) {
+        $this->processBatch($chunk);
+    }
+}
+
+private function processBatch(array $events): void
+{
+    $this->db->beginTransaction();
+    try {
+        foreach ($events as $event) {
+            $this->processEvent($event);
+        }
+        $this->db->commit();
+    } catch (Exception $e) {
+        $this->db->rollBack();
+        throw $e;
+    }
+}
+```
